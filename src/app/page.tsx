@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { motion } from "framer-motion";
 
 const fadeUp = {
@@ -19,54 +18,21 @@ const fadeUp = {
 export default function Home() {
   return (
     <div className="relative min-h-screen font-[family-name:var(--font-inter)]">
-      {/* Nav */}
-      <motion.nav
+      {/* Logo */}
+      <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="flex items-center justify-between px-8 py-6 md:px-16"
+        className="px-8 py-6 md:px-16"
       >
         <span className="text-lg font-semibold tracking-tight">mOtz.dev</span>
-        <div className="flex gap-8 text-sm text-neutral-500">
-          <a href="#about" className="transition-colors hover:text-foreground">
-            About
-          </a>
-          <a href="#work" className="transition-colors hover:text-foreground">
-            Work
-          </a>
-          <a
-            href="#contact"
-            className="transition-colors hover:text-foreground"
-          >
-            Contact
-          </a>
-        </div>
-      </motion.nav>
+      </motion.div>
 
       {/* Hero */}
       <main className="flex flex-col items-center px-6 pt-20 pb-32 text-center md:pt-28">
-        {/* Avatar */}
-        <motion.div
-          custom={0}
-          variants={fadeUp}
-          initial="hidden"
-          animate="visible"
-          className="mb-8"
-        >
-          <div className="relative h-28 w-28 overflow-hidden rounded-full bg-sky-100 ring-4 ring-sky-50">
-            <Image
-              src="/avatar.png"
-              alt="Mats"
-              fill
-              className="object-cover"
-              priority
-            />
-          </div>
-        </motion.div>
-
         {/* Greeting */}
         <motion.p
-          custom={1}
+          custom={0}
           variants={fadeUp}
           initial="hidden"
           animate="visible"
@@ -77,7 +43,7 @@ export default function Home() {
 
         {/* Headline */}
         <motion.h1
-          custom={2}
+          custom={1}
           variants={fadeUp}
           initial="hidden"
           animate="visible"
@@ -88,7 +54,7 @@ export default function Home() {
 
         {/* Description */}
         <motion.p
-          custom={3}
+          custom={2}
           variants={fadeUp}
           initial="hidden"
           animate="visible"
@@ -102,7 +68,7 @@ export default function Home() {
 
         {/* CTA */}
         <motion.a
-          custom={4}
+          custom={3}
           variants={fadeUp}
           initial="hidden"
           animate="visible"
