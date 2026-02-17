@@ -48,7 +48,7 @@ export default function PrankCard({
           src={img}
           alt={title}
           fill
-          className="object-cover transition-opacity duration-700"
+          className="object-cover transition-opacity duration-700 will-change-[opacity]"
           style={{
             opacity: preview ? (imgIdx === slideIndex ? 1 : 0) : (imgIdx === 0 ? 1 : 0),
           }}

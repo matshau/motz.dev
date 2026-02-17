@@ -25,7 +25,7 @@ const topPrompts = [
 export default function AiPranks() {
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [scrollX, setScrollX] = useState(0);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [activeCard, setActiveCard] = useState<number | null>(null);
   const [slideIndex, setSlideIndex] = useState(0);
   const [showCreateSheet, setShowCreateSheet] = useState(false);
@@ -36,9 +36,24 @@ export default function AiPranks() {
   const previewTimeout = useRef<NodeJS.Timeout | null>(null);
   const slideInterval = useRef<NodeJS.Timeout | null>(null);
   const focusedCard = useRef<number>(0);
+  const rafRef = useRef<number | null>(null);
 
   const cardWidth = typeof window !== "undefined" ? window.innerWidth * 0.7 : 300;
   const gap = 16;
+
+  const updateCardTransforms = useCallback((scroll: number) => {
+    cardRefs.current.forEach((el, i) => {
+      if (!el) return;
+      const cardStart = i * (cardWidth + gap);
+      const distance = Math.abs(scroll - cardStart);
+      const progress = Math.min(distance / (cardWidth + gap), 1);
+      const scale = 1 - progress * 0.1;
+      const opacity = 1 - progress * 0.4;
+      const tx = -progress * 20;
+      el.style.transform = `translate3d(${tx}px, 0, 0) scale(${scale})`;
+      el.style.opacity = String(opacity);
+    });
+  }, [cardWidth, gap]);
 
   const stopSlideshow = useCallback(() => {
     if (slideInterval.current) {
@@ -70,13 +85,17 @@ export default function AiPranks() {
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
     const scroll = scrollRef.current.scrollLeft;
-    setScrollX(scroll);
+
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      updateCardTransforms(scroll);
+    });
 
     const closestCard = Math.round(scroll / (cardWidth + gap));
     if (closestCard !== focusedCard.current) {
       startPreviewTimer(closestCard);
     }
-  }, [cardWidth, gap, startPreviewTimer]);
+  }, [cardWidth, gap, startPreviewTimer, updateCardTransforms]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -86,12 +105,14 @@ export default function AiPranks() {
   }, [handleScroll]);
 
   useEffect(() => {
+    updateCardTransforms(0);
     startPreviewTimer(0);
     return () => {
       if (previewTimeout.current) clearTimeout(previewTimeout.current);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
       stopSlideshow();
     };
-  }, [startPreviewTimer]);
+  }, [startPreviewTimer, updateCardTransforms]);
 
   const handleGenerate = () => {
     setShowCreateSheet(false);
@@ -216,28 +237,19 @@ export default function AiPranks() {
           className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 scroll-pl-5"
         >
           {communityPranks.map((prank, i) => {
-            const cardStart = i * (cardWidth + gap);
-            const distance = Math.abs(scrollX - cardStart);
-            const progress = Math.min(distance / (cardWidth + gap), 1);
-            const scale = 1 - progress * 0.1;
-            const opacity = 1 - progress * 0.4;
-            const translateX = -progress * 20;
-
             return (
-              <PrankCard
+              <div
                 key={i}
-                {...prank}
-                preview={activeCard === i}
-                slideIndex={slideIndex}
+                ref={(el) => { cardRefs.current[i] = el; }}
                 className="shrink-0 snap-start"
-                style={{
-                  width: "70vw",
-                  transform: `scale(${scale}) translateX(${translateX}px)`,
-                  opacity,
-                  transition: "transform 0.15s ease-out, opacity 0.15s ease-out",
-                  transformOrigin: "center center",
-                }}
-              />
+                style={{ width: "70vw", willChange: "transform, opacity", transformOrigin: "center center" }}
+              >
+                <PrankCard
+                  {...prank}
+                  preview={activeCard === i}
+                  slideIndex={slideIndex}
+                />
+              </div>
             );
           })}
         </div>
