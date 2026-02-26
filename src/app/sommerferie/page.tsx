@@ -6,13 +6,13 @@ import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 
 const RouteMap = dynamic(() => import("./components/RouteMap"), { ssr: false });
-import type { Camper, MeetUp } from "./data/itinerary";
+import type { Camper, MeetUp, PackingItem, TodoItem } from "./data/itinerary";
 import {
   days,
   campers as initialCampers,
   meetUps as initialMeetUps,
-  todoList,
-  packingList,
+  packingList as initialPackingList,
+  todoList as initialTodoList,
   familyMembers,
   departureDate,
   returnDate,
@@ -101,6 +101,10 @@ export default function SommerferiePage() {
   const [loaded, setLoaded] = useState(false);
   const daysLeft = useCountdown(departureDate);
   const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [packingItems, setPackingItems] = useState<PackingItem[]>(initialPackingList);
+  const [showPackingForm, setShowPackingForm] = useState(false);
+  const [packingLabel, setPackingLabel] = useState("");
+  const [packingCategory, setPackingCategory] = useState("");
   const [camperList, setCamperList] = useState<Camper[]>(initialCampers);
   const [showCamperForm, setShowCamperForm] = useState(false);
   const [camperName, setCamperName] = useState("");
@@ -109,6 +113,9 @@ export default function SommerferiePage() {
   const [camperDesc, setCamperDesc] = useState("");
   const [camperLink, setCamperLink] = useState("");
   const [todoDone, setTodoDone] = useState<Set<string>>(new Set());
+  const [todoItems, setTodoItems] = useState<TodoItem[]>(initialTodoList);
+  const [showTodoForm, setShowTodoForm] = useState(false);
+  const [todoLabel, setTodoLabel] = useState("");
   const [meetUpList, setMeetUpList] = useState<MeetUp[]>(initialMeetUps);
   const [showMeetUpForm, setShowMeetUpForm] = useState(false);
   const [meetUpName, setMeetUpName] = useState("");
@@ -160,6 +167,14 @@ export default function SommerferiePage() {
     });
   }
 
+  function addTodo() {
+    const label = todoLabel.trim();
+    if (!label) return;
+    setTodoItems((prev) => [...prev, { id: `t-${Date.now()}`, label }]);
+    setTodoLabel("");
+    setShowTodoForm(false);
+  }
+
   function addMeetUp() {
     const name = meetUpName.trim();
     if (!name) return;
@@ -172,7 +187,39 @@ export default function SommerferiePage() {
     setShowMeetUpForm(false);
   }
 
-  const categories = [...new Set(packingList.map((i) => i.category))];
+  function removePackingItem(id: string) {
+    setPackingItems((prev) => prev.filter((i) => i.id !== id));
+    setChecked((prev) => { const next = new Set(prev); next.delete(id); return next; });
+  }
+
+  function removeTodo(id: string) {
+    setTodoItems((prev) => prev.filter((i) => i.id !== id));
+    setTodoDone((prev) => { const next = new Set(prev); next.delete(id); return next; });
+  }
+
+  function removeCamper(id: string) {
+    setCamperList((prev) => prev.filter((c) => c.id !== id));
+  }
+
+  function removeMeetUp(id: string) {
+    setMeetUpList((prev) => prev.filter((m) => m.id !== id));
+  }
+
+  function addPackingItem() {
+    const label = packingLabel.trim();
+    if (!label) return;
+    const item: PackingItem = {
+      id: `p-${Date.now()}`,
+      label,
+      category: packingCategory.trim() || "Annet",
+    };
+    setPackingItems((prev) => [...prev, item]);
+    setPackingLabel("");
+    setPackingCategory("");
+    setShowPackingForm(false);
+  }
+
+  const categories = [...new Set(packingItems.map((i) => i.category))];
 
   return (
     <div className="min-h-screen bg-amber-50 font-[family-name:var(--font-inter)]">
@@ -313,16 +360,26 @@ export default function SommerferiePage() {
             >
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold text-sky-900">{c.name}</h3>
-                {c.link && (
-                  <a
-                    href={c.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-medium text-sky-500 hover:text-sky-700"
+                <div className="flex items-center gap-3">
+                  {c.link && (
+                    <a
+                      href={c.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-medium text-sky-500 hover:text-sky-700"
+                    >
+                      Lenke
+                    </a>
+                  )}
+                  <button
+                    onClick={() => removeCamper(c.id)}
+                    className="text-sky-300 transition-colors hover:text-red-400"
                   >
-                    Lenke
-                  </a>
-                )}
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
               </div>
               {c.description && (
                 <p className="mt-1 text-xs text-sky-600/80">{c.description}</p>
@@ -446,6 +503,14 @@ export default function SommerferiePage() {
                   <p className="mt-0.5 text-xs text-sky-600/80">{m.note}</p>
                 )}
               </div>
+              <button
+                onClick={() => removeMeetUp(m.id)}
+                className="text-sky-300 transition-colors hover:text-red-400"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </motion.div>
           ))}
 
@@ -513,7 +578,7 @@ export default function SommerferiePage() {
           Pakkeliste
         </h2>
         <p className="mb-6 text-center text-sm text-sky-600">
-          {checked.size} av {packingList.length} pakket
+          {checked.size} av {packingItems.length} pakket
         </p>
 
         <div className="flex flex-col gap-6">
@@ -523,51 +588,119 @@ export default function SommerferiePage() {
                 {cat}
               </h3>
               <div className="flex flex-col gap-2">
-                {packingList
+                {packingItems
                   .filter((item) => item.category === cat)
                   .map((item) => (
-                    <button
+                    <div
                       key={item.id}
-                      onClick={() => toggle(item.id)}
-                      className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 text-left shadow-sm transition-colors hover:bg-sky-50"
+                      className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-sm transition-colors hover:bg-sky-50"
                     >
-                      <div
-                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
-                          checked.has(item.id)
-                            ? "border-green-500 bg-green-500"
-                            : "border-sky-300"
-                        }`}
+                      <button
+                        onClick={() => toggle(item.id)}
+                        className="flex flex-1 items-center gap-3 text-left"
                       >
-                        {checked.has(item.id) && (
-                          <svg
-                            className="h-3 w-3 text-white"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={3}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
-                        )}
-                      </div>
-                      <span
-                        className={`text-sm ${
-                          checked.has(item.id)
-                            ? "text-sky-400 line-through"
-                            : "text-sky-800"
-                        }`}
+                        <div
+                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
+                            checked.has(item.id)
+                              ? "border-green-500 bg-green-500"
+                              : "border-sky-300"
+                          }`}
+                        >
+                          {checked.has(item.id) && (
+                            <svg
+                              className="h-3 w-3 text-white"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={3}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                          )}
+                        </div>
+                        <span
+                          className={`text-sm ${
+                            checked.has(item.id)
+                              ? "text-sky-400 line-through"
+                              : "text-sky-800"
+                          }`}
+                        >
+                          {item.label}
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => removePackingItem(item.id)}
+                        className="text-sky-300 transition-colors hover:text-red-400"
                       >
-                        {item.label}
-                      </span>
-                    </button>
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                   ))}
               </div>
             </div>
           ))}
+
+          {showPackingForm ? (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col gap-3 rounded-2xl bg-white px-5 py-4 shadow-sm"
+            >
+              <input
+                type="text"
+                value={packingLabel}
+                onChange={(e) => setPackingLabel(e.target.value)}
+                placeholder="Hva skal pakkes?"
+                autoFocus
+                className="w-full rounded-xl border-2 border-sky-200 bg-transparent px-3 py-2 text-sm text-sky-900 outline-none placeholder:text-sky-300 focus:border-sky-400"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") addPackingItem();
+                  if (e.key === "Escape") setShowPackingForm(false);
+                }}
+              />
+              <input
+                type="text"
+                value={packingCategory}
+                onChange={(e) => setPackingCategory(e.target.value)}
+                placeholder="Kategori (valgfritt, f.eks. Klær barn)"
+                className="w-full rounded-xl border-2 border-sky-200 bg-transparent px-3 py-2 text-xs text-sky-700 outline-none placeholder:text-sky-300 focus:border-sky-400"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") addPackingItem();
+                  if (e.key === "Escape") setShowPackingForm(false);
+                }}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={addPackingItem}
+                  className="flex-1 rounded-xl bg-sky-500 py-2 text-xs font-bold text-white transition-colors hover:bg-sky-600"
+                >
+                  Legg til
+                </button>
+                <button
+                  onClick={() => setShowPackingForm(false)}
+                  className="rounded-xl px-4 py-2 text-xs font-medium text-sky-500 transition-colors hover:bg-sky-50"
+                >
+                  Avbryt
+                </button>
+              </div>
+            </motion.div>
+          ) : (
+            <button
+              onClick={() => setShowPackingForm(true)}
+              className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-sky-200 px-5 py-4 text-sm font-medium text-sky-400 transition-colors hover:border-sky-400 hover:text-sky-600"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m7-7H5" />
+              </svg>
+              Legg til ting
+            </button>
+          )}
         </div>
       </section>
 
@@ -612,49 +745,106 @@ export default function SommerferiePage() {
           Må fikses
         </h2>
         <p className="mb-8 text-center text-sm text-sky-500">
-          {todoDone.size} av {todoList.length} ferdig
+          {todoDone.size} av {todoItems.length} ferdig
         </p>
 
         <div className="flex flex-col gap-2">
-          {todoList.map((item, i) => {
+          {todoItems.map((item, i) => {
             const done = todoDone.has(item.id);
             return (
-              <motion.button
+              <motion.div
                 key={item.id}
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.03 }}
-                onClick={() => toggleTodo(item.id)}
-                className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 text-left shadow-sm transition-colors hover:bg-sky-50"
+                className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-sm transition-colors hover:bg-sky-50"
               >
-                <div
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
-                    done ? "border-green-500 bg-green-500" : "border-sky-300"
-                  }`}
+                <button
+                  onClick={() => toggleTodo(item.id)}
+                  className="flex flex-1 items-center gap-3 text-left"
                 >
-                  {done && (
-                    <svg
-                      className="h-3 w-3 text-white"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={3}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </div>
-                <span
-                  className={`text-sm ${
-                    done ? "text-sky-400 line-through" : "text-sky-800"
-                  }`}
+                  <div
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
+                      done ? "border-green-500 bg-green-500" : "border-sky-300"
+                    }`}
+                  >
+                    {done && (
+                      <svg
+                        className="h-3 w-3 text-white"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={3}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                  <span
+                    className={`text-sm ${
+                      done ? "text-sky-400 line-through" : "text-sky-800"
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                </button>
+                <button
+                  onClick={() => removeTodo(item.id)}
+                  className="text-sky-300 transition-colors hover:text-red-400"
                 >
-                  {item.label}
-                </span>
-              </motion.button>
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </motion.div>
             );
           })}
+
+          {showTodoForm ? (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col gap-3 rounded-2xl bg-white px-5 py-4 shadow-sm"
+            >
+              <input
+                type="text"
+                value={todoLabel}
+                onChange={(e) => setTodoLabel(e.target.value)}
+                placeholder="Hva må fikses?"
+                autoFocus
+                className="w-full rounded-xl border-2 border-sky-200 bg-transparent px-3 py-2 text-sm text-sky-900 outline-none placeholder:text-sky-300 focus:border-sky-400"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") addTodo();
+                  if (e.key === "Escape") setShowTodoForm(false);
+                }}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={addTodo}
+                  className="flex-1 rounded-xl bg-sky-500 py-2 text-xs font-bold text-white transition-colors hover:bg-sky-600"
+                >
+                  Legg til
+                </button>
+                <button
+                  onClick={() => setShowTodoForm(false)}
+                  className="rounded-xl px-4 py-2 text-xs font-medium text-sky-500 transition-colors hover:bg-sky-50"
+                >
+                  Avbryt
+                </button>
+              </div>
+            </motion.div>
+          ) : (
+            <button
+              onClick={() => setShowTodoForm(true)}
+              className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-sky-200 px-5 py-4 text-sm font-medium text-sky-400 transition-colors hover:border-sky-400 hover:text-sky-600"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m7-7H5" />
+              </svg>
+              Legg til oppgave
+            </button>
+          )}
         </div>
       </section>
     </div>
