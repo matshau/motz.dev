@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -21,6 +21,16 @@ const fadeUp = {
 export default function Home() {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [showContact, setShowContact] = useState(false);
+
+  useEffect(() => {
+    if (showContact) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [showContact]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -88,77 +98,91 @@ export default function Home() {
         </motion.p>
 
         {/* CTA */}
-        <motion.a
+        <motion.button
           custom={3}
           variants={fadeUp}
           initial="hidden"
           animate="visible"
-          href="#contact"
+          onClick={() => setShowContact(true)}
           className="rounded-full bg-foreground px-8 py-4 text-sm font-medium uppercase tracking-widest text-background transition-transform hover:scale-105"
         >
           Get in touch
-        </motion.a>
+        </motion.button>
       </main>
 
-      {/* Contact */}
-      <section id="contact" className="mx-auto max-w-lg px-6 pb-32">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="mb-8 text-center font-[family-name:var(--font-playfair)] text-3xl font-bold tracking-tight"
-        >
-          Get in touch
-        </motion.h2>
-
-        <motion.form
-          onSubmit={handleSubmit}
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-          className="flex flex-col gap-4"
-        >
-          <input
-            required
-            type="text"
-            placeholder="Name"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="rounded-lg border border-neutral-300 bg-transparent px-4 py-3 text-sm outline-none transition-colors focus:border-foreground dark:border-neutral-700"
-          />
-          <input
-            required
-            type="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            className="rounded-lg border border-neutral-300 bg-transparent px-4 py-3 text-sm outline-none transition-colors focus:border-foreground dark:border-neutral-700"
-          />
-          <textarea
-            required
-            rows={5}
-            placeholder="Message"
-            value={form.message}
-            onChange={(e) => setForm({ ...form, message: e.target.value })}
-            className="resize-none rounded-lg border border-neutral-300 bg-transparent px-4 py-3 text-sm outline-none transition-colors focus:border-foreground dark:border-neutral-700"
-          />
-          <button
-            type="submit"
-            disabled={status === "sending"}
-            className="rounded-full bg-foreground px-8 py-4 text-sm font-medium uppercase tracking-widest text-background transition-transform hover:scale-105 disabled:opacity-50"
+      {/* Contact Modal */}
+      <AnimatePresence>
+        {showContact && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
+            onClick={(e) => { if (e.target === e.currentTarget) setShowContact(false); }}
           >
-            {status === "sending" ? "Sending..." : "Send message"}
-          </button>
-          {status === "sent" && (
-            <p className="text-center text-sm text-green-600">Message sent! I&apos;ll get back to you soon.</p>
-          )}
-          {status === "error" && (
-            <p className="text-center text-sm text-red-600">Something went wrong. Please try again.</p>
-          )}
-        </motion.form>
-      </section>
+            <motion.div
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              className="relative w-full max-w-md rounded-2xl bg-background p-8 shadow-2xl border border-neutral-200 dark:border-neutral-800"
+            >
+              <button
+                onClick={() => setShowContact(false)}
+                className="absolute top-4 right-4 text-neutral-400 hover:text-foreground transition-colors text-xl leading-none"
+                aria-label="Close"
+              >
+                &times;
+              </button>
+
+              <h2 className="mb-6 text-center font-[family-name:var(--font-playfair)] text-3xl font-bold tracking-tight">
+                Get in touch
+              </h2>
+
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <input
+                  required
+                  type="text"
+                  placeholder="Name"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="rounded-lg border border-neutral-300 bg-transparent px-4 py-3 text-sm outline-none transition-colors focus:border-foreground dark:border-neutral-700"
+                />
+                <input
+                  required
+                  type="email"
+                  placeholder="Email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="rounded-lg border border-neutral-300 bg-transparent px-4 py-3 text-sm outline-none transition-colors focus:border-foreground dark:border-neutral-700"
+                />
+                <textarea
+                  required
+                  rows={4}
+                  placeholder="Message"
+                  value={form.message}
+                  onChange={(e) => setForm({ ...form, message: e.target.value })}
+                  className="resize-none rounded-lg border border-neutral-300 bg-transparent px-4 py-3 text-sm outline-none transition-colors focus:border-foreground dark:border-neutral-700"
+                />
+                <button
+                  type="submit"
+                  disabled={status === "sending"}
+                  className="rounded-full bg-foreground px-8 py-4 text-sm font-medium uppercase tracking-widest text-background transition-transform hover:scale-105 disabled:opacity-50"
+                >
+                  {status === "sending" ? "Sending..." : "Send message"}
+                </button>
+                {status === "sent" && (
+                  <p className="text-center text-sm text-green-600">Message sent! I&apos;ll get back to you soon.</p>
+                )}
+                {status === "error" && (
+                  <p className="text-center text-sm text-red-600">Something went wrong. Please try again.</p>
+                )}
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
